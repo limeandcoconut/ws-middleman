@@ -55,8 +55,7 @@ const authenticate = async ({ password }, socket) => {
   return getAuthReply()
 }
 
-const send = (id, reply) => {
-  const socket = sockets[id]
+const send = (id, reply, socket = sockets[id]) => {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     console.log(`Error: connection to ${id} not open`)
     return
@@ -90,7 +89,7 @@ ws.on('connection', async (socket) => {
     if (role === 'api') {
       // Respond to the api:
       if (type === 'apiAuth') {
-        send('api', await authenticate(data, socket))
+        send('api', await authenticate(data, socket), socket)
         return
       }
       if (!apiJWT) {
