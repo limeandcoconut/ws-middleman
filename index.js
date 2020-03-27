@@ -4,10 +4,11 @@ const argon2 = require('argon2')
 const { jwtSecret } = require('./keys.js')
 const JWT = require('./jwt.js')(jwtSecret)
 
-const hashedPassword = require('./password-hashes.js')
+let hashedPassword = require('./password-hashes.js')
 if (!hashedPassword) {
   console.log('\u001B[41mWARNING: No passwords specified.\u001b[0m')
 }
+hashedPassword = hashedPassword[0]
 
 const ws = new WebSocket.Server({ port })
 
@@ -44,6 +45,7 @@ const getAuthReply = () => ({
 })
 
 const authenticate = async ({ password }, socket) => {
+	console.log(hashedPassword, password)
   if (sockets.api || !await argon2.verify(hashedPassword, password)) {
     return {
       ...codes[401],
@@ -79,7 +81,7 @@ const send = (id, reply) => {
 }
 
 ws.on('connection', async (socket) => {
-  console.log(socket)
+  console.log(socket.id)
   socket.on('message', async (message) => {
     let { type, jwt, id, data = {}, apiJWT, role } = JSON.parse(message)
     console.log(type, jwt, id, data, apiJWT, role)
