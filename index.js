@@ -149,10 +149,6 @@ ws.on('connection', async (socket) => {
       id = getId()
       sockets[id] = socket
       socket.id = id
-      message.id = id
-      console.log(socket.id)
-      console.log(message)
-      console.log(message.id)
     }
     // If there's no api tunnel
     if (!sockets.api) {
@@ -161,6 +157,12 @@ ws.on('connection', async (socket) => {
       return
     }
     // Pass message to api
+    message = JSON.stringify({
+      type,
+      jwt,
+      id,
+      data,
+    })
     console.log(message)
     sockets.api.send(message)
     return
