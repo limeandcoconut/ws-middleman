@@ -158,6 +158,7 @@ ws.on('connection', async (socket) => {
       return
     }
     // Pass message to api
+    console.log(message)
     sockets.api.send(message)
     return
   })
