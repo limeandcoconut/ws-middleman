@@ -4,8 +4,8 @@ const argon2 = require('argon2')
 const { jwtSecret } = require('./keys.js')
 const JWT = require('./jwt.js')(jwtSecret)
 
-const passwords = require('./password-hashes.js')
-if (passwords.length === 0) {
+const hashedPassword = require('./password-hashes.js')
+if (!hashedPassword) {
   console.log('\u001B[41mWARNING: No passwords specified.\u001b[0m')
 }
 
@@ -13,14 +13,17 @@ const ws = new WebSocket.Server({ port })
 
 const codes = {
   400: {
+    type: 'error',
     code: 400,
     error: 'Invalid request',
   },
   401: {
+    type: 'error',
     code: 401,
     error: 'Unauthorized',
   },
   502: {
+    type: 'error',
     code: 502,
     error: 'Unreachable',
   },
@@ -32,22 +35,23 @@ const getId = () => freeId++
 const sockets = {}
 
 const getAuthReply = () => ({
-  // Generate a token that's good for 30 minutes
-  jwt: JWT.encode({ exp: Date.now() + (30 * 60 * 1000) }),
+  type: 'auth',
+  role: 'api',
+  data: {
+    // Generate a token that's good for 30 minutes
+    jwt: JWT.encode({ exp: Date.now() + (30 * 60 * 1000) }),
+  },
 })
 
 const authenticate = async ({ password }, socket) => {
-  for (const record of passwords) {
-    if (!await argon2.verify(record, password)) {
-      continue
-    }
-    sockets.api = socket
+  if (sockets.api || !await argon2.verify(hashedPassword, password)) {
     return {
-      type: 'auth',
-      data: getAuthReply(),
+      ...codes[401],
+      role: 'api',
     }
   }
-  return codes[401]
+  sockets.api = socket
+  return getAuthReply()
 }
 
 const send = (id, reply) => {
@@ -61,7 +65,11 @@ const send = (id, reply) => {
   if (reply.error) {
     socket.send(JSON.stringify({
       type: 'error',
-      data: reply,
+      role: reply.role,
+      data: {
+        code: reply.code,
+        error: reply.error,
+      },
     }))
     return
   }
@@ -78,37 +86,41 @@ ws.on('connection', async (socket) => {
 
     // If it's an api:
     if (role === 'api') {
-      if (sockets.api) {
-        send(400)
-        return
-      }
-      if (type === 'auth') {
-        send(id, await authenticate(data, socket))
+      // Respond to the api:
+      if (type === 'apiAuth') {
+        send('api', await authenticate(data, socket))
         return
       }
       if (!apiJWT) {
-        send(id, codes[401])
+        send('api', {
+          ...codes[401],
+          role,
+        })
         return
       }
       const decoded = JWT.decode(apiJWT)
       if (!decoded || decoded.exp < Date.now()) {
-        send(id, codes[401])
+        send('api', {
+          ...codes[401],
+          role,
+        })
         return
       }
-      if (type === 'reauth') {
-        send(id, getAuthReply())
+      if (type === 'apiReauth') {
+        send('api', getAuthReply())
         return
       }
-      if (type === 'broadcast') {
+      // Send to consumer(s):
+      if (type === 'update') {
         // Broadcast to all connected clients but the api
+        message = JSON.stringify({
+          type: 'update',
+          data,
+        })
         ws.clients.forEach((client) => {
-          if (client === sockets.api) {
-            return
+          if (client !== sockets.api) {
+            client.send(message)
           }
-          client.send(JSON.stringify({
-            type: 'update',
-            data,
-          }))
         })
         return
       }
