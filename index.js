@@ -52,6 +52,7 @@ const authenticate = async ({ password }, socket) => {
     }
   }
   sockets.api = socket
+  socket.id = 'api'
   return getAuthReply()
 }
 
@@ -140,6 +141,7 @@ ws.on('connection', async (socket) => {
       id = getId()
       message.id = id
       sockets[id] = socket
+      socket.id = id
     }
     // If there's no api tunnel
     if (!sockets.api) {
