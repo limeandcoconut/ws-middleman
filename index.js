@@ -164,7 +164,7 @@ ws.on('connection', async (socket) => {
       data,
     })
     console.log(message)
-    sockets.api.send(message)
+    sockets[id].send(message)
     return
   })
 
