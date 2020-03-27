@@ -1,0 +1,23 @@
+{
+  "name": "ws-middleman",
+  "version": "0.0.1",
+  "author": "Jacob Smith <js@jacobsmith.tech> (https://github.com/limeandcoconut)",
+  "private": false,
+  "main": "index.js",
+  "scripts": {
+    "scp:secrets": "scp -r ./password-hashes.js dev:ws-middleman/"
+  },
+  "keywords": [],
+  "license": "isc",
+  "dependencies": {
+    "argon2": "^0.26.1",
+    "ws": "^7.2.3"
+  },
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-limeandcoconut": "^1.3.0",
+    "eslint-plugin-html": "^6.0.0",
+    "eslint-plugin-unicorn": "^17.2.0",
+    "eslint-plugin-vue": "^6.2.2"
+  }
+}
