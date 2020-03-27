@@ -56,6 +56,7 @@ const send = (id, reply) => {
     console.log(`Error: connection to ${id} not open`)
     return
   }
+  console.log('sent', reply)
 
   if (reply.error) {
     socket.send(JSON.stringify({
@@ -73,8 +74,7 @@ ws.on('connection', async (socket) => {
   console.log(socket)
   socket.on('message', async (message) => {
     let { type, jwt, id, data = {}, apiJWT, role } = JSON.parse(message)
-
-    console.log(type, data, jwt)
+    console.log(type, jwt, id, data, apiJWT, role)
 
     // If it's an api:
     if (role === 'api') {
