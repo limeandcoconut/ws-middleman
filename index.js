@@ -150,6 +150,8 @@ ws.on('connection', async (socket) => {
       message.id = id
       sockets[id] = socket
       socket.id = id
+      console.log(socket.id)
+      console.log(message)
     }
     // If there's no api tunnel
     if (!sockets.api) {
