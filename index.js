@@ -145,9 +145,7 @@ ws.on('connection', async (socket) => {
     // If it's a consumer:
 
     // If the consumer is unknown id it
-    console.log(id)
-    console.log(socket.id)
-    if (typeof id === 'undefined') {
+    if (typeof id !== 'number') {
       id = getId()
       message.id = id
       sockets[id] = socket
