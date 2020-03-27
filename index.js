@@ -35,7 +35,7 @@ const getId = () => freeId++
 
 const sockets = {}
 
-const getHeartbeat = (socket) => {
+const getHeartbeat = socket => () => {
   socket.isAlive = true
 }
 
