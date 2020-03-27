@@ -35,6 +35,10 @@ const getId = () => freeId++
 
 const sockets = {}
 
+const getHeartbeat = (socket) => {
+  socket.isAlive = true
+}
+
 const getAuthReply = () => ({
   type: 'apiAuth',
   role: 'api',
@@ -82,6 +86,10 @@ const send = (id, reply, socket = sockets[id]) => {
 ws.on('connection', async (socket) => {
   console.log('CONNECTION:')
   console.log(socket.id)
+
+  socket.isAlive = true
+  socket.on('pong', getHeartbeat(socket))
+
   socket.on('message', async (message) => {
     let { type, jwt, id, data = {}, apiJWT, role } = JSON.parse(message)
     console.log(type, jwt, id, data, apiJWT, role)
@@ -158,3 +166,15 @@ ws.on('connection', async (socket) => {
     sockets[socket.id] = null
   })
 })
+
+setInterval(() => {
+  ws.clients.forEach((socket) => {
+    if (socket.isAlive === false) {
+      socket.terminate()
+      return
+    }
+
+    socket.isAlive = false
+    socket.ping(() => {})
+  })
+}, 9000)
