@@ -36,7 +36,7 @@ const getId = () => freeId++
 const sockets = {}
 
 const getAuthReply = () => ({
-  type: 'auth',
+  type: 'apiAuth',
   role: 'api',
   data: {
     // Generate a token that's good for 30 minutes
@@ -45,7 +45,6 @@ const getAuthReply = () => ({
 })
 
 const authenticate = async ({ password }, socket) => {
-	console.log(hashedPassword, password)
   if (sockets.api || !await argon2.verify(hashedPassword, password)) {
     return {
       ...codes[401],
@@ -81,6 +80,7 @@ const send = (id, reply) => {
 }
 
 ws.on('connection', async (socket) => {
+  console.log('CONNECTION:')
   console.log(socket.id)
   socket.on('message', async (message) => {
     let { type, jwt, id, data = {}, apiJWT, role } = JSON.parse(message)
