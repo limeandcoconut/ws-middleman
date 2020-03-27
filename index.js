@@ -147,11 +147,12 @@ ws.on('connection', async (socket) => {
     // If the consumer is unknown id it
     if (typeof id !== 'number') {
       id = getId()
-      message.id = id
       sockets[id] = socket
       socket.id = id
+      message.id = id
       console.log(socket.id)
       console.log(message)
+      console.log(message.id)
     }
     // If there's no api tunnel
     if (!sockets.api) {
