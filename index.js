@@ -211,4 +211,5 @@ setInterval(() => {
     socket.ping(() => {})
   })
   // Keep this timeout in sync with haproxy's settings
-}, 9000)
+  // Haproxy is currently configred for a 1h timeout
+}, 30 * 60 * 1000)
