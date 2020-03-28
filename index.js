@@ -10,6 +10,13 @@ if (!hashedPassword) {
 }
 hashedPassword = hashedPassword[0]
 
+// eslint-disable-next-line require-jsdoc
+function log() {
+  if (process.env.VERBOSE === true) {
+    console.log(arguments)
+  }
+}
+
 const ws = new WebSocket.Server({ port })
 
 const codes = {
@@ -35,12 +42,14 @@ const getId = () => freeId++
 
 const sockets = {}
 
+// Set up heartbeat to keep connection open
 const getHeartbeat = socket => () => {
   socket.isAlive = true
 }
 
 const getAuthReply = () => ({
   type: 'apiAuth',
+  // Only the api can authenticate
   role: 'api',
   data: {
     // Generate a token that's good for 30 minutes
@@ -49,24 +58,33 @@ const getAuthReply = () => ({
 })
 
 const authenticate = async ({ password }, socket) => {
+  // If there's already an api registered or if the password is invalid 401
   if (sockets.api || !await argon2.verify(hashedPassword, password)) {
     return {
       ...codes[401],
       role: 'api',
     }
   }
+  // Register the api and id it
   sockets.api = socket
   socket.id = 'api'
+
+  log('API Authenticated')
+
   return getAuthReply()
 }
 
+// Send to a socket
 const send = (id, reply, socket = sockets[id]) => {
+  // If the socket is closed, error
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     console.log(`Error: connection to ${id} not open`)
     return
   }
-  console.log('sent', reply)
 
+  log('Sent: ', reply)
+
+  // Construct an error and include role
   if (reply.error) {
     socket.send(JSON.stringify({
       type: 'error',
@@ -79,24 +97,24 @@ const send = (id, reply, socket = sockets[id]) => {
     return
   }
 
+  // Send successful message
   socket.send(JSON.stringify(reply))
-  return
 }
 
 ws.on('connection', async (socket) => {
-  console.log('CONNECTION:')
-  console.log(socket.id)
+  log('New Connection')
 
+  // When the server recieves an connection tag it and set up a heartbeat
   socket.isAlive = true
   socket.on('pong', getHeartbeat(socket))
 
   socket.on('message', async (message) => {
     let { type, jwt, id, data = {}, apiJWT, role } = JSON.parse(message)
-    console.log(type, jwt, id, data, apiJWT, role)
+    log('Incoming: ', { type, jwt, id, data, apiJWT, role })
 
     // If it's an api:
     if (role === 'api') {
-      // Respond to the api:
+      // Respond to the api directly:
       if (type === 'apiAuth') {
         send('api', await authenticate(data, socket), socket)
         return
@@ -135,9 +153,11 @@ ws.on('connection', async (socket) => {
         return
       }
       if (typeof id === 'undefined') {
+        // 400 because there's no id for the consumer
         send(id, codes[400])
         return
       }
+      // Send message along to consumer
       send(id, { type, jwt, id, data })
       return
     }
@@ -149,10 +169,10 @@ ws.on('connection', async (socket) => {
       id = getId()
       sockets[id] = socket
       socket.id = id
+      log('Consumer registerd: ', id)
     }
-    // If there's no api tunnel
+    // Only respond direcly if there's no gateway
     if (!sockets.api) {
-      // Only respond direcly if there's no gateway
       send(id, codes[502])
       return
     }
@@ -163,13 +183,19 @@ ws.on('connection', async (socket) => {
       id,
       data,
     })
-    console.log(message)
+    log('Sent: ', {
+      type,
+      jwt,
+      id,
+      data,
+    })
     sockets.api.send(message)
     return
   })
 
   socket.on('close', () => {
     sockets[socket.id] = null
+    log('Closed: ', socket.id)
   })
 })
 
@@ -181,6 +207,8 @@ setInterval(() => {
     }
 
     socket.isAlive = false
+    // WS spec requires a pong response
     socket.ping(() => {})
   })
+  // Keep this timeout in sync with haproxy's settings
 }, 9000)
