@@ -50,7 +50,7 @@ const getHeartbeat = socket => () => {
 const getAuthReply = () => ({
   type: 'apiAuth',
   // Only the api can authenticate
-  role: 'api',
+  role: 'middleman',
   data: {
     // Generate a token that's good for 30 minutes
     jwt: JWT.encode({ exp: Date.now() + (30 * 60 * 1000) }),
@@ -62,7 +62,7 @@ const authenticate = async ({ password }, socket) => {
   if (sockets.api || !await argon2.verify(hashedPassword, password)) {
     return {
       ...codes[401],
-      role: 'api',
+      role: 'middleman',
     }
   }
   // Register the api and id it
@@ -122,7 +122,7 @@ ws.on('connection', async (socket) => {
       if (!apiJWT) {
         send('api', {
           ...codes[401],
-          role,
+          role: 'middleman',
         })
         return
       }
@@ -130,7 +130,7 @@ ws.on('connection', async (socket) => {
       if (!decoded || decoded.exp < Date.now()) {
         send('api', {
           ...codes[401],
-          role,
+          role: 'middleman',
         })
         return
       }
